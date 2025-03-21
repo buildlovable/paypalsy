@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { User, Transaction, PaymentMethod, Profile } from '@/lib/types';
 
@@ -152,16 +151,30 @@ export const createTransaction = async (
   // If it's a payment, update the balances
   if (type === 'payment') {
     // Deduct from sender
-    await supabase.rpc('update_balance', { 
-      user_id: senderId, 
-      amount_change: -amount 
-    });
+    const { error: senderBalanceError } = await supabase.rpc(
+      'update_balance', 
+      { 
+        user_id: senderId, 
+        amount_change: -amount 
+      }
+    );
+    
+    if (senderBalanceError) {
+      console.error('Error updating sender balance:', senderBalanceError);
+    }
     
     // Add to recipient
-    await supabase.rpc('update_balance', { 
-      user_id: recipientId, 
-      amount_change: amount 
-    });
+    const { error: recipientBalanceError } = await supabase.rpc(
+      'update_balance', 
+      { 
+        user_id: recipientId, 
+        amount_change: amount 
+      }
+    );
+    
+    if (recipientBalanceError) {
+      console.error('Error updating recipient balance:', recipientBalanceError);
+    }
   }
 
   return {
