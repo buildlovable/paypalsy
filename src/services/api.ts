@@ -38,9 +38,9 @@ export const fetchUserTransactions = async (userId: string): Promise<Transaction
   const { data, error } = await supabase
     .from('transactions')
     .select(`
-      *,
-      sender:sender_id(id, name, avatar),
-      recipient:recipient_id(id, name, avatar)
+      id, amount, type, status, date, note,
+      sender:profiles!sender_id(id, name, avatar),
+      recipient:profiles!recipient_id(id, name, avatar)
     `)
     .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
     .order('date', { ascending: false });
@@ -54,8 +54,8 @@ export const fetchUserTransactions = async (userId: string): Promise<Transaction
   return (data || []).map(item => ({
     id: item.id,
     amount: item.amount,
-    type: item.type,
-    status: item.status,
+    type: item.type as 'payment' | 'request',
+    status: item.status as 'pending' | 'completed' | 'rejected',
     date: item.date,
     note: item.note,
     sender: {
@@ -91,7 +91,12 @@ export const createTransaction = async (
   const { data, error } = await supabase
     .from('transactions')
     .insert(transaction)
-    .select();
+    .select(`
+      id, amount, type, status, date, note,
+      sender:profiles!sender_id(id, name, avatar),
+      recipient:profiles!recipient_id(id, name, avatar)
+    `)
+    .single();
 
   if (error) {
     console.error('Error creating transaction:', error);
@@ -113,7 +118,24 @@ export const createTransaction = async (
     });
   }
 
-  return data[0] as unknown as Transaction;
+  return {
+    id: data.id,
+    amount: data.amount,
+    type: data.type as 'payment' | 'request',
+    status: data.status as 'pending' | 'completed' | 'rejected',
+    date: data.date,
+    note: data.note,
+    sender: {
+      id: data.sender.id,
+      name: data.sender.name,
+      avatar: data.sender.avatar,
+    },
+    recipient: {
+      id: data.recipient.id,
+      name: data.recipient.name,
+      avatar: data.recipient.avatar,
+    }
+  };
 };
 
 // Payment Method Services

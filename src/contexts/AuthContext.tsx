@@ -1,13 +1,14 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, Session, AuthError } from '@supabase/supabase-js';
-import { AuthFormData } from '@/lib/types';
+import { User as SupabaseUser, Session, AuthError } from '@supabase/supabase-js';
+import { AuthFormData, User as AppUser, mapSupabaseUser } from '@/lib/types';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchUserProfile } from '@/services/api';
 
 interface AuthContextType {
-  user: User | null;
+  user: AppUser | null;
   session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -19,26 +20,52 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+
+  // Update user profile data when session changes
+  const updateUserData = async (supabaseUser: SupabaseUser | null) => {
+    if (!supabaseUser) {
+      setUser(null);
+      return;
+    }
+    
+    try {
+      const profileData = await fetchUserProfile(supabaseUser.id);
+      if (profileData) {
+        setUser(profileData);
+      } else {
+        // Fallback if profile not found
+        setUser({
+          id: supabaseUser.id,
+          email: supabaseUser.email || '',
+          name: supabaseUser.user_metadata.name || supabaseUser.email?.split('@')[0] || '',
+          avatar: '',
+          balance: 0
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
 
   // Set up auth state listener and check for existing session
   useEffect(() => {
     // First set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
+      async (event, currentSession) => {
         setSession(currentSession);
-        setUser(currentSession?.user ?? null);
+        await updateUserData(currentSession?.user ?? null);
         setIsLoading(false);
       }
     );
 
     // Then check for existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
       setSession(currentSession);
-      setUser(currentSession?.user ?? null);
+      await updateUserData(currentSession?.user ?? null);
       setIsLoading(false);
     });
 

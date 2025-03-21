@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -9,9 +8,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { User, CreditCard, Phone, Mail, Key, Edit, Save, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
 
 const Profile = () => {
   const { user, isAuthenticated, logout } = useAuth();
+  const { profile, updateProfile, isLoading: profileLoading } = useProfile();
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -24,24 +25,24 @@ const Profile = () => {
     avatar: ''
   });
   
-  // Initialize user data from auth context
+  // Initialize user data from profile
   useEffect(() => {
-    if (user) {
+    if (profile) {
       setUserData({
-        name: user.name,
-        email: user.email,
-        phone: user.phone || '',
-        avatar: user.avatar
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone || '',
+        avatar: profile.avatar
       });
     }
-  }, [user]);
+  }, [profile]);
   
   // Redirect if not authenticated
   useEffect(() => {
-    if (!isAuthenticated && !isLoading) {
+    if (!isAuthenticated && !isLoading && !profileLoading) {
       navigate('/auth');
     }
-  }, [isAuthenticated, navigate, isLoading]);
+  }, [isAuthenticated, navigate, isLoading, profileLoading]);
   
   const getInitials = (name: string) => {
     const parts = name.split(' ');
@@ -49,26 +50,21 @@ const Profile = () => {
     return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
   };
   
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     setIsLoading(true);
     
-    // In a real app, this would update the user in the database
-    setTimeout(() => {
-      setIsLoading(false);
-      setIsEditing(false);
-      
-      // Update local storage to persist changes
-      if (user) {
-        const updatedUser = { ...user, ...userData };
-        localStorage.setItem('user', JSON.stringify(updatedUser));
+    if (user) {
+      const success = await updateProfile(userData);
+      if (success) {
+        setIsEditing(false);
       }
-      
-      toast.success('Profile updated successfully');
-    }, 1500);
+    }
+    
+    setIsLoading(false);
   };
 
-  if (!user) {
-    return null; // Don't render anything while checking authentication
+  if (!user || !profile) {
+    return <div className="flex items-center justify-center min-h-screen">Loading profile...</div>;
   }
 
   return (
