@@ -103,12 +103,15 @@ export const createTransaction = async (
   type: 'payment' | 'request',
   note?: string
 ): Promise<Transaction | null> => {
+  // Here's where we need to fix the type errors
+  const status: 'pending' | 'completed' | 'rejected' = type === 'payment' ? 'completed' : 'pending';
+  
   const transaction = {
     sender_id: senderId,
     recipient_id: recipientId,
     amount,
     type,
-    status: type === 'payment' ? 'completed' : 'pending',
+    status,
     note,
     date: new Date().toISOString(),
   };
@@ -238,4 +241,3 @@ export const searchUsers = async (query: string): Promise<User[]> => {
 
   return data as User[];
 };
-
