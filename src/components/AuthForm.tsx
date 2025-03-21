@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,12 +5,11 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Eye, EyeOff, Mail, Key, User } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 const AuthForm = () => {
-  const [isLoading, setIsLoading] = useState(false);
+  const { login, signup, isLoading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
-  const navigate = useNavigate();
   
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
@@ -22,7 +20,7 @@ const AuthForm = () => {
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Basic validation
@@ -31,17 +29,13 @@ const AuthForm = () => {
       return;
     }
     
-    // Simulate API call
-    setIsLoading(true);
-    
-    setTimeout(() => {
-      setIsLoading(false);
-      toast.success('Logged in successfully');
-      navigate('/dashboard');
-    }, 1500);
+    await login({
+      email: loginEmail,
+      password: loginPassword
+    });
   };
   
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Basic validation
@@ -50,14 +44,11 @@ const AuthForm = () => {
       return;
     }
     
-    // Simulate API call
-    setIsLoading(true);
-    
-    setTimeout(() => {
-      setIsLoading(false);
-      toast.success('Account created successfully');
-      navigate('/dashboard');
-    }, 1500);
+    await signup({
+      name: signupName,
+      email: signupEmail,
+      password: signupPassword
+    });
   };
 
   return (

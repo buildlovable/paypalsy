@@ -1,24 +1,47 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
-import { User, CreditCard, Phone, Mail, Key, Edit, Save } from 'lucide-react';
+import { User, CreditCard, Phone, Mail, Key, Edit, Save, LogOut } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Profile = () => {
+  const { user, isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Mock user data
+  // Profile data state
   const [userData, setUserData] = useState({
-    name: 'Alex Johnson',
-    email: 'alex@example.com',
-    phone: '+1 (555) 123-4567',
+    name: '',
+    email: '',
+    phone: '',
     avatar: ''
   });
+  
+  // Initialize user data from auth context
+  useEffect(() => {
+    if (user) {
+      setUserData({
+        name: user.name,
+        email: user.email,
+        phone: user.phone || '',
+        avatar: user.avatar
+      });
+    }
+  }, [user]);
+  
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated && !isLoading) {
+      navigate('/auth');
+    }
+  }, [isAuthenticated, navigate, isLoading]);
   
   const getInitials = (name: string) => {
     const parts = name.split(' ');
@@ -29,13 +52,24 @@ const Profile = () => {
   const handleSaveProfile = () => {
     setIsLoading(true);
     
-    // Simulate API call
+    // In a real app, this would update the user in the database
     setTimeout(() => {
       setIsLoading(false);
       setIsEditing(false);
+      
+      // Update local storage to persist changes
+      if (user) {
+        const updatedUser = { ...user, ...userData };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
+      
       toast.success('Profile updated successfully');
     }, 1500);
   };
+
+  if (!user) {
+    return null; // Don't render anything while checking authentication
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -61,33 +95,42 @@ const Profile = () => {
                     <p className="text-gray-500">{userData.email}</p>
                   </div>
                   
-                  <Button 
-                    variant={isEditing ? "default" : "outline"} 
-                    className="mt-4 md:mt-0"
-                    onClick={() => isEditing ? handleSaveProfile() : setIsEditing(true)}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <div className="flex items-center">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                        Saving...
-                      </div>
-                    ) : (
-                      <>
-                        {isEditing ? (
-                          <>
-                            <Save className="h-4 w-4 mr-2" />
-                            Save
-                          </>
-                        ) : (
-                          <>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit Profile
-                          </>
-                        )}
-                      </>
-                    )}
-                  </Button>
+                  <div className="flex mt-4 md:mt-0 space-x-2">
+                    <Button 
+                      variant={isEditing ? "default" : "outline"} 
+                      onClick={() => isEditing ? handleSaveProfile() : setIsEditing(true)}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <div className="flex items-center">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                          Saving...
+                        </div>
+                      ) : (
+                        <>
+                          {isEditing ? (
+                            <>
+                              <Save className="h-4 w-4 mr-2" />
+                              Save
+                            </>
+                          ) : (
+                            <>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </>
+                          )}
+                        </>
+                      )}
+                    </Button>
+                    
+                    <Button 
+                      variant="outline" 
+                      onClick={logout}
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </Button>
+                  </div>
                 </div>
                 
                 <div className="mt-10 space-y-8">

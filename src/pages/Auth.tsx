@@ -2,12 +2,24 @@
 import Navbar from '@/components/Navbar';
 import AuthForm from '@/components/AuthForm';
 import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Auth = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+  const navigate = useNavigate();
+
   useEffect(() => {
     // Scroll to top when component mounts
     window.scrollTo(0, 0);
   }, []);
+
+  useEffect(() => {
+    // Redirect to dashboard if already authenticated
+    if (isAuthenticated && !isLoading) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate, isLoading]);
 
   return (
     <div className="min-h-screen flex flex-col">
