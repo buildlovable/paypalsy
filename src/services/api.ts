@@ -34,41 +34,66 @@ export const updateUserProfile = async (userId: string, updates: Partial<Profile
 
 // Transaction Services
 export const fetchUserTransactions = async (userId: string): Promise<Transaction[]> => {
-  // We need to get sender and recipient details for each transaction
-  const { data, error } = await supabase
+  // First fetch the transactions
+  const { data: transactionsData, error: transactionsError } = await supabase
     .from('transactions')
-    .select(`
-      id, amount, type, status, date, note,
-      sender:profiles!sender_id(id, name, avatar),
-      recipient:profiles!recipient_id(id, name, avatar)
-    `)
+    .select('*')
     .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
     .order('date', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching transactions:', error);
+  if (transactionsError) {
+    console.error('Error fetching transactions:', transactionsError);
     return [];
   }
 
-  // Transform to match our Transaction type
-  return (data || []).map(item => ({
-    id: item.id,
-    amount: item.amount,
-    type: item.type as 'payment' | 'request',
-    status: item.status as 'pending' | 'completed' | 'rejected',
-    date: item.date,
-    note: item.note,
-    sender: {
-      id: item.sender.id,
-      name: item.sender.name,
-      avatar: item.sender.avatar,
-    },
-    recipient: {
-      id: item.recipient.id,
-      name: item.recipient.name,
-      avatar: item.recipient.avatar,
-    }
-  }));
+  // Then get all the unique user IDs involved in these transactions
+  const userIds = new Set<string>();
+  transactionsData.forEach(transaction => {
+    userIds.add(transaction.sender_id);
+    userIds.add(transaction.recipient_id);
+  });
+
+  // Fetch profile data for all these users
+  const { data: profilesData, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, name, avatar')
+    .in('id', Array.from(userIds));
+
+  if (profilesError) {
+    console.error('Error fetching profiles for transactions:', profilesError);
+    return [];
+  }
+
+  // Create a map of user IDs to profile data for quick lookup
+  const profilesMap = new Map();
+  profilesData.forEach(profile => {
+    profilesMap.set(profile.id, profile);
+  });
+
+  // Transform transactions data with profile information
+  return transactionsData.map(transaction => {
+    const senderProfile = profilesMap.get(transaction.sender_id) || { name: 'Unknown', avatar: '' };
+    const recipientProfile = profilesMap.get(transaction.recipient_id) || { name: 'Unknown', avatar: '' };
+    
+    return {
+      id: transaction.id,
+      amount: transaction.amount,
+      type: transaction.type as 'payment' | 'request',
+      status: transaction.status as 'pending' | 'completed' | 'rejected',
+      date: transaction.date,
+      note: transaction.note,
+      sender: {
+        id: transaction.sender_id,
+        name: senderProfile.name,
+        avatar: senderProfile.avatar,
+      },
+      recipient: {
+        id: transaction.recipient_id,
+        name: recipientProfile.name,
+        avatar: recipientProfile.avatar,
+      }
+    };
+  });
 };
 
 export const createTransaction = async (
@@ -88,19 +113,37 @@ export const createTransaction = async (
     date: new Date().toISOString(),
   };
 
-  const { data, error } = await supabase
+  // Insert the transaction
+  const { data: insertedData, error: insertError } = await supabase
     .from('transactions')
     .insert(transaction)
-    .select(`
-      id, amount, type, status, date, note,
-      sender:profiles!sender_id(id, name, avatar),
-      recipient:profiles!recipient_id(id, name, avatar)
-    `)
+    .select()
     .single();
 
-  if (error) {
-    console.error('Error creating transaction:', error);
+  if (insertError) {
+    console.error('Error creating transaction:', insertError);
     return null;
+  }
+
+  // Fetch sender and recipient profiles
+  const { data: senderData, error: senderError } = await supabase
+    .from('profiles')
+    .select('name, avatar')
+    .eq('id', senderId)
+    .single();
+
+  if (senderError) {
+    console.error('Error fetching sender profile:', senderError);
+  }
+
+  const { data: recipientData, error: recipientError } = await supabase
+    .from('profiles')
+    .select('name, avatar')
+    .eq('id', recipientId)
+    .single();
+
+  if (recipientError) {
+    console.error('Error fetching recipient profile:', recipientError);
   }
 
   // If it's a payment, update the balances
@@ -119,21 +162,21 @@ export const createTransaction = async (
   }
 
   return {
-    id: data.id,
-    amount: data.amount,
-    type: data.type as 'payment' | 'request',
-    status: data.status as 'pending' | 'completed' | 'rejected',
-    date: data.date,
-    note: data.note,
+    id: insertedData.id,
+    amount: insertedData.amount,
+    type: insertedData.type as 'payment' | 'request',
+    status: insertedData.status as 'pending' | 'completed' | 'rejected',
+    date: insertedData.date,
+    note: insertedData.note,
     sender: {
-      id: data.sender.id,
-      name: data.sender.name,
-      avatar: data.sender.avatar,
+      id: senderId,
+      name: senderData?.name || 'Unknown',
+      avatar: senderData?.avatar || '',
     },
     recipient: {
-      id: data.recipient.id,
-      name: data.recipient.name,
-      avatar: data.recipient.avatar,
+      id: recipientId,
+      name: recipientData?.name || 'Unknown',
+      avatar: recipientData?.avatar || '',
     }
   };
 };
@@ -195,3 +238,4 @@ export const searchUsers = async (query: string): Promise<User[]> => {
 
   return data as User[];
 };
+
