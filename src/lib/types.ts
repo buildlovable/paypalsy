@@ -1,4 +1,6 @@
 
+import { User as SupabaseUser } from '@supabase/supabase-js';
+
 export interface User {
   id: string;
   name: string;
@@ -27,8 +29,34 @@ export interface Transaction {
   };
 }
 
+export interface PaymentMethod {
+  id: string;
+  user_id: string;
+  stripe_payment_method_id: string;
+  last_four: string;
+  card_brand: string;
+  expires_at: string;
+  is_default: boolean;
+}
+
 export interface AuthFormData {
   email: string;
   password: string;
   name?: string;
 }
+
+export interface Profile extends User {
+  // Additional profile fields can be added here
+}
+
+// Helper type to convert Supabase user to our app's User type
+export const mapSupabaseUser = (profile: any): User => {
+  return {
+    id: profile.id,
+    name: profile.name,
+    email: profile.email,
+    avatar: profile.avatar || '',
+    balance: profile.balance || 0,
+    phone: profile.phone || '',
+  };
+};

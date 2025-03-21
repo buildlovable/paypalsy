@@ -1,72 +1,68 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, AuthFormData } from '@/lib/types';
+import { User, Session, AuthError } from '@supabase/supabase-js';
+import { AuthFormData } from '@/lib/types';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AuthContextType {
   user: User | null;
+  session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (data: AuthFormData) => Promise<void>;
   signup: (data: AuthFormData) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Check if user is already logged in on mount
+  // Set up auth state listener and check for existing session
   useEffect(() => {
-    const checkAuthStatus = async () => {
-      try {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
-        }
-      } catch (error) {
-        console.error('Failed to restore auth state:', error);
-      } finally {
+    // First set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, currentSession) => {
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
         setIsLoading(false);
       }
-    };
+    );
 
-    checkAuthStatus();
+    // Then check for existing session
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (data: AuthFormData) => {
     setIsLoading(true);
     try {
-      // In a real app, this would be an API call to your backend
-      const mockApiCall = () => {
-        return new Promise<User>((resolve) => {
-          setTimeout(() => {
-            // Simulate fetching user from database
-            resolve({
-              id: 'usr_' + Math.random().toString(36).substring(2, 9),
-              name: data.email.split('@')[0],
-              email: data.email,
-              avatar: '',
-              balance: 1000,
-            });
-          }, 1000);
-        });
-      };
+      const { error } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
 
-      const userData = await mockApiCall();
-      
-      // Store user in localStorage for persistence
-      localStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
+      if (error) {
+        throw error;
+      }
+
       toast.success('Logged in successfully');
       navigate('/dashboard');
     } catch (error) {
-      console.error('Login failed:', error);
-      toast.error('Login failed. Please check your credentials.');
+      const authError = error as AuthError;
+      console.error('Login failed:', authError);
+      toast.error(authError.message || 'Login failed. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }
@@ -75,48 +71,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signup = async (data: AuthFormData) => {
     setIsLoading(true);
     try {
-      // In a real app, this would be an API call to your backend
-      const mockApiCall = () => {
-        return new Promise<User>((resolve) => {
-          setTimeout(() => {
-            // Simulate creating user in database
-            resolve({
-              id: 'usr_' + Math.random().toString(36).substring(2, 9),
-              name: data.name || data.email.split('@')[0],
-              email: data.email,
-              avatar: '',
-              balance: 500, // Starting balance for new users
-            });
-          }, 1000);
-        });
-      };
+      const { error } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            name: data.name || data.email.split('@')[0],
+          },
+        },
+      });
 
-      const userData = await mockApiCall();
-      
-      // Store user in localStorage for persistence
-      localStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
+      if (error) {
+        throw error;
+      }
+
       toast.success('Account created successfully');
       navigate('/dashboard');
     } catch (error) {
-      console.error('Signup failed:', error);
-      toast.error('Failed to create account. Please try again.');
+      const authError = error as AuthError;
+      console.error('Signup failed:', authError);
+      toast.error(authError.message || 'Failed to create account. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('user');
-    setUser(null);
-    toast.success('Logged out successfully');
-    navigate('/');
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast.success('Logged out successfully');
+      navigate('/');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      toast.error('Failed to log out. Please try again.');
+    }
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        session,
         isLoading,
         isAuthenticated: !!user,
         login,
