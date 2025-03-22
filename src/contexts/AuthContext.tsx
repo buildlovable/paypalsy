@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User as SupabaseUser, Session, AuthError } from '@supabase/supabase-js';
 import { AuthFormData, User as AppUser, mapSupabaseUser } from '@/lib/types';
@@ -49,24 +48,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error('Error fetching user profile:', error);
       // Still set isLoading to false even if there's an error
-      setIsLoading(false);
     }
   };
 
   // Set up auth state listener and check for existing session
   useEffect(() => {
     let isMounted = true;
+    console.log('Setting up auth state listener');
     
     // First set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         if (!isMounted) return;
+        console.log('Auth state changed:', event, !!currentSession);
         
         setSession(currentSession);
         try {
           await updateUserData(currentSession?.user ?? null);
         } finally {
-          setIsLoading(false);
+          if (isMounted) {
+            setIsLoading(false);
+          }
         }
       }
     );
@@ -75,6 +77,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const initializeAuth = async () => {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
+        console.log('Got initial session:', !!currentSession);
+        
         if (!isMounted) return;
         
         setSession(currentSession);
@@ -83,6 +87,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error('Error getting session:', error);
       } finally {
         if (isMounted) {
+          console.log('Setting isLoading to false');
           setIsLoading(false);
         }
       }
@@ -91,6 +96,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     initializeAuth();
 
     return () => {
+      console.log('Cleaning up auth state listener');
       isMounted = false;
       subscription.unsubscribe();
     };

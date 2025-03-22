@@ -1,7 +1,7 @@
 
 import Navbar from '@/components/Navbar';
 import AuthForm from '@/components/AuthForm';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Progress } from "@/components/ui/progress";
@@ -9,10 +9,18 @@ import { Progress } from "@/components/ui/progress";
 const Auth = () => {
   const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
+  const [initialLoadCompleted, setInitialLoadCompleted] = useState(false);
 
   useEffect(() => {
     // Scroll to top when component mounts
     window.scrollTo(0, 0);
+    
+    // Set a timeout to ensure we don't show the loading state forever
+    const timer = setTimeout(() => {
+      setInitialLoadCompleted(true);
+    }, 3000); // 3 seconds timeout
+    
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -22,11 +30,16 @@ const Auth = () => {
     }
   }, [isAuthenticated, navigate, isLoading]);
 
+  // Show the auth form if:
+  // 1. We're not loading anymore OR
+  // 2. Initial load timeout has completed (to prevent infinite loading)
+  const showAuthForm = !isLoading || initialLoadCompleted;
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <div className="pt-16 flex flex-1 items-center justify-center px-4">
-        {isLoading ? (
+        {!showAuthForm ? (
           <div className="w-full max-w-md">
             <div className="text-center mb-8">
               <h2 className="text-xl font-medium">Loading your profile...</h2>
