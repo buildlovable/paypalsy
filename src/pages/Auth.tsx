@@ -21,16 +21,16 @@ const Auth = () => {
       return;
     }
     
-    // Show form after a shorter timeout (500ms) to prevent long loading states
+    // Show form after a shorter timeout (300ms) to prevent long loading states
     const timer = setTimeout(() => {
       setShowLoadingState(false);
-    }, 500);
+    }, 300);
     
     return () => clearTimeout(timer);
   }, [isAuthenticated, navigate]);
 
   // Only show loading state if explicitly loading AND we haven't timed out
-  const shouldShowLoading = isLoading && showLoadingState;
+  const shouldShowLoading = isLoading && showLoadingState && !isAuthenticated;
 
   return (
     <div className="min-h-screen flex flex-col">

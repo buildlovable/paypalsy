@@ -62,20 +62,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     // First set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
+      (event, currentSession) => {
         if (!isMounted) return;
         console.log('Auth state changed:', event, !!currentSession);
         
+        // Set session synchronously
         setSession(currentSession);
         
-        try {
-          await updateUserData(currentSession?.user ?? null);
-        } catch (error) {
-          // Ensure loading is set to false even on error
-          if (isMounted) {
-            setIsLoading(false);
-          }
+        // If no session, we can immediately set user to null and isLoading to false
+        if (!currentSession) {
+          setUser(null);
+          setIsLoading(false);
+          return;
         }
+        
+        // Use setTimeout to defer the async operation to avoid blocking during auth state change
+        setTimeout(async () => {
+          try {
+            if (isMounted) {
+              await updateUserData(currentSession?.user ?? null);
+            }
+          } catch (error) {
+            console.error('Error updating user data:', error);
+            if (isMounted) {
+              setIsLoading(false);
+            }
+          }
+        }, 0);
       }
     );
 
