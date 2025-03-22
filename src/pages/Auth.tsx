@@ -30,8 +30,12 @@ const Auth = () => {
           <div className="w-full max-w-md">
             <div className="text-center mb-8">
               <h2 className="text-xl font-medium">Loading your profile...</h2>
+              <p className="text-gray-500 mt-2">This will only take a moment...</p>
             </div>
             <Progress value={75} className="w-full" />
+            <p className="text-xs text-gray-400 text-center mt-4">
+              If this takes too long, try refreshing the page
+            </p>
           </div>
         ) : (
           <div className="max-w-md w-full">

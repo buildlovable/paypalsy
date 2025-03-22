@@ -48,28 +48,52 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
+      // Still set isLoading to false even if there's an error
+      setIsLoading(false);
     }
   };
 
   // Set up auth state listener and check for existing session
   useEffect(() => {
+    let isMounted = true;
+    
     // First set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
+        if (!isMounted) return;
+        
         setSession(currentSession);
-        await updateUserData(currentSession?.user ?? null);
-        setIsLoading(false);
+        try {
+          await updateUserData(currentSession?.user ?? null);
+        } finally {
+          setIsLoading(false);
+        }
       }
     );
 
     // Then check for existing session
-    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      await updateUserData(currentSession?.user ?? null);
-      setIsLoading(false);
-    });
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        if (!isMounted) return;
+        
+        setSession(currentSession);
+        await updateUserData(currentSession?.user ?? null);
+      } catch (error) {
+        console.error('Error getting session:', error);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
 
-    return () => subscription.unsubscribe();
+    initializeAuth();
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (data: AuthFormData) => {
