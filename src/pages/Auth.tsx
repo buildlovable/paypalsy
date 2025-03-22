@@ -25,10 +25,11 @@ const Auth = () => {
 
   useEffect(() => {
     // Redirect to dashboard if already authenticated
-    if (isAuthenticated && !isLoading) {
+    // We don't need to wait for isLoading to be false if we already know the user is authenticated
+    if (isAuthenticated) {
       navigate('/dashboard');
     }
-  }, [isAuthenticated, navigate, isLoading]);
+  }, [isAuthenticated, navigate]);
 
   // Show the auth form if:
   // 1. We're not loading anymore OR

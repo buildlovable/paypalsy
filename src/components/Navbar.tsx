@@ -1,14 +1,17 @@
 
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, User, DollarSign, Bell, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useAuth } from '@/contexts/AuthContext';
 
-const Navbar = ({ isAuthenticated = false }: { isAuthenticated?: boolean }) => {
+const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const isMobile = useIsMobile();
+  const { isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
@@ -16,6 +19,20 @@ const Navbar = ({ isAuthenticated = false }: { isAuthenticated?: boolean }) => {
 
   const closeMenu = () => {
     setIsOpen(false);
+  };
+
+  const handleGetStarted = () => {
+    closeMenu();
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    } else {
+      navigate('/auth');
+    }
+  };
+
+  const handleLogout = async () => {
+    closeMenu();
+    await logout();
   };
 
   return (
@@ -43,12 +60,12 @@ const Navbar = ({ isAuthenticated = false }: { isAuthenticated?: boolean }) => {
                 >
                   Home
                 </Link>
-                <Link 
-                  to="/auth"
+                <Button 
+                  onClick={handleGetStarted}
                   className="bg-primary text-white px-4 py-2 rounded-lg font-medium transition-all hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2"
                 >
                   Get Started
-                </Link>
+                </Button>
               </>
             ) : (
               <>
@@ -71,11 +88,14 @@ const Navbar = ({ isAuthenticated = false }: { isAuthenticated?: boolean }) => {
                 <Button variant="ghost" size="icon" className="text-muted-foreground">
                   <Bell className="h-5 w-5" />
                 </Button>
-                <Link to="/" className="flex items-center space-x-2">
-                  <Button variant="ghost" size="icon" className="text-muted-foreground">
-                    <LogOut className="h-5 w-5" />
-                  </Button>
-                </Link>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="text-muted-foreground" 
+                  onClick={handleLogout}
+                >
+                  <LogOut className="h-5 w-5" />
+                </Button>
               </>
             )}
           </div>
@@ -104,13 +124,12 @@ const Navbar = ({ isAuthenticated = false }: { isAuthenticated?: boolean }) => {
                 >
                   Home
                 </Link>
-                <Link 
-                  to="/auth"
+                <Button 
+                  onClick={handleGetStarted}
                   className="bg-primary text-white px-4 py-2 rounded-lg font-medium transition-all hover:bg-primary/90 text-center"
-                  onClick={closeMenu}
                 >
                   Get Started
-                </Link>
+                </Button>
               </>
             ) : (
               <>
@@ -132,14 +151,13 @@ const Navbar = ({ isAuthenticated = false }: { isAuthenticated?: boolean }) => {
                 >
                   Profile
                 </Link>
-                <Link 
-                  to="/" 
+                <Button 
+                  onClick={handleLogout}
                   className="text-sm font-medium px-4 py-2 rounded-md text-destructive hover:bg-destructive/10 flex items-center"
-                  onClick={closeMenu}
                 >
                   <LogOut className="h-4 w-4 mr-2" />
                   Logout
-                </Link>
+                </Button>
               </>
             )}
           </div>
