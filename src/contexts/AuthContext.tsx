@@ -4,7 +4,7 @@ import { User as SupabaseUser, Session, AuthError } from '@supabase/supabase-js'
 import { AuthFormData, User as AppUser, mapSupabaseUser } from '@/lib/types';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/services/base';
 import { fetchUserProfile } from '@/services/api';
 
 interface AuthContextType {
@@ -73,7 +73,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = async (data: AuthFormData) => {
-    setIsLoading(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email: data.email,
@@ -90,13 +89,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const authError = error as AuthError;
       console.error('Login failed:', authError);
       toast.error(authError.message || 'Login failed. Please check your credentials.');
-    } finally {
-      setIsLoading(false);
+      throw error; // Rethrow to handle in form component
     }
   };
 
   const signup = async (data: AuthFormData) => {
-    setIsLoading(true);
     try {
       const { error } = await supabase.auth.signUp({
         email: data.email,
@@ -118,8 +115,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const authError = error as AuthError;
       console.error('Signup failed:', authError);
       toast.error(authError.message || 'Failed to create account. Please try again.');
-    } finally {
-      setIsLoading(false);
+      throw error; // Rethrow to handle in form component
     }
   };
 

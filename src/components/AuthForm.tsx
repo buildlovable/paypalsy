@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 const AuthForm = () => {
   const { login, signup, isLoading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
@@ -29,10 +30,15 @@ const AuthForm = () => {
       return;
     }
     
-    await login({
-      email: loginEmail,
-      password: loginPassword
-    });
+    setIsSubmitting(true);
+    try {
+      await login({
+        email: loginEmail,
+        password: loginPassword
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   const handleSignup = async (e: React.FormEvent) => {
@@ -44,12 +50,20 @@ const AuthForm = () => {
       return;
     }
     
-    await signup({
-      name: signupName,
-      email: signupEmail,
-      password: signupPassword
-    });
+    setIsSubmitting(true);
+    try {
+      await signup({
+        name: signupName,
+        email: signupEmail,
+        password: signupPassword
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  // Determine if loading should be shown (either from auth context or local submission state)
+  const showLoading = isSubmitting || isLoading;
 
   return (
     <div className="w-full max-w-md">
@@ -73,7 +87,7 @@ const AuthForm = () => {
                   placeholder="you@example.com"
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  disabled={isLoading}
+                  disabled={showLoading}
                   className="pl-10"
                 />
               </div>
@@ -96,7 +110,7 @@ const AuthForm = () => {
                   placeholder="••••••••"
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
-                  disabled={isLoading}
+                  disabled={showLoading}
                   className="pl-10"
                 />
                 <Button
@@ -118,9 +132,9 @@ const AuthForm = () => {
             <Button 
               type="submit" 
               className="w-full py-6 mt-6"
-              disabled={isLoading}
+              disabled={showLoading}
             >
-              {isLoading ? (
+              {showLoading ? (
                 <div className="flex items-center">
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                   Logging in...
@@ -143,7 +157,7 @@ const AuthForm = () => {
                   placeholder="John Doe"
                   value={signupName}
                   onChange={(e) => setSignupName(e.target.value)}
-                  disabled={isLoading}
+                  disabled={showLoading}
                   className="pl-10"
                 />
               </div>
@@ -161,7 +175,7 @@ const AuthForm = () => {
                   placeholder="you@example.com"
                   value={signupEmail}
                   onChange={(e) => setSignupEmail(e.target.value)}
-                  disabled={isLoading}
+                  disabled={showLoading}
                   className="pl-10"
                 />
               </div>
@@ -179,7 +193,7 @@ const AuthForm = () => {
                   placeholder="••••••••"
                   value={signupPassword}
                   onChange={(e) => setSignupPassword(e.target.value)}
-                  disabled={isLoading}
+                  disabled={showLoading}
                   className="pl-10"
                 />
                 <Button
@@ -204,9 +218,9 @@ const AuthForm = () => {
             <Button 
               type="submit" 
               className="w-full py-6 mt-6"
-              disabled={isLoading}
+              disabled={showLoading}
             >
-              {isLoading ? (
+              {showLoading ? (
                 <div className="flex items-center">
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                   Creating account...
