@@ -9,38 +9,34 @@ import { Progress } from "@/components/ui/progress";
 const Auth = () => {
   const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
-  const [initialLoadCompleted, setInitialLoadCompleted] = useState(false);
+  const [showLoadingState, setShowLoadingState] = useState(true);
 
   useEffect(() => {
     // Scroll to top when component mounts
     window.scrollTo(0, 0);
     
-    // Set a timeout to ensure we don't show the loading state forever
-    const timer = setTimeout(() => {
-      setInitialLoadCompleted(true);
-    }, 3000); // 3 seconds timeout
-    
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    // Redirect to dashboard if already authenticated
-    // We don't need to wait for isLoading to be false if we already know the user is authenticated
+    // If already authenticated, redirect immediately
     if (isAuthenticated) {
       navigate('/dashboard');
+      return;
     }
+    
+    // Show form after a shorter timeout (500ms) to prevent long loading states
+    const timer = setTimeout(() => {
+      setShowLoadingState(false);
+    }, 500);
+    
+    return () => clearTimeout(timer);
   }, [isAuthenticated, navigate]);
 
-  // Show the auth form if:
-  // 1. We're not loading anymore OR
-  // 2. Initial load timeout has completed (to prevent infinite loading)
-  const showAuthForm = !isLoading || initialLoadCompleted;
+  // Only show loading state if explicitly loading AND we haven't timed out
+  const shouldShowLoading = isLoading && showLoadingState;
 
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <div className="pt-16 flex flex-1 items-center justify-center px-4">
-        {!showAuthForm ? (
+        {shouldShowLoading ? (
           <div className="w-full max-w-md">
             <div className="text-center mb-8">
               <h2 className="text-xl font-medium">Loading your profile...</h2>

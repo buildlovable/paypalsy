@@ -1,9 +1,10 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User as SupabaseUser, Session, AuthError } from '@supabase/supabase-js';
 import { AuthFormData, User as AppUser, mapSupabaseUser } from '@/lib/types';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/services/base';
+import { supabase } from '@/integrations/supabase/client';
 import { fetchUserProfile } from '@/services/api';
 
 interface AuthContextType {
@@ -28,6 +29,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const updateUserData = async (supabaseUser: SupabaseUser | null) => {
     if (!supabaseUser) {
       setUser(null);
+      setIsLoading(false);
       return;
     }
     
@@ -47,7 +49,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
-      // Still set isLoading to false even if there's an error
+    } finally {
+      // Always set loading to false when done, regardless of outcome
+      setIsLoading(false);
     }
   };
 
@@ -63,9 +67,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log('Auth state changed:', event, !!currentSession);
         
         setSession(currentSession);
+        
         try {
           await updateUserData(currentSession?.user ?? null);
-        } finally {
+        } catch (error) {
+          // Ensure loading is set to false even on error
           if (isMounted) {
             setIsLoading(false);
           }
@@ -82,12 +88,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (!isMounted) return;
         
         setSession(currentSession);
+        
+        // Don't wait for profile data to finish loading if there's no session
+        if (!currentSession) {
+          setIsLoading(false);
+          return;
+        }
+        
         await updateUserData(currentSession?.user ?? null);
       } catch (error) {
         console.error('Error getting session:', error);
-      } finally {
         if (isMounted) {
-          console.log('Setting isLoading to false');
           setIsLoading(false);
         }
       }
