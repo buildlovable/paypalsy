@@ -69,7 +69,7 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Navbar isAuthenticated={true} />
+      <Navbar />
       
       <div className="pt-20 pb-10 flex-1">
         <div className="container mx-auto px-4">
