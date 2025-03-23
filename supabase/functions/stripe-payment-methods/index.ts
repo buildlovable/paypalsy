@@ -15,6 +15,8 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log("Stripe function called, method:", req.method);
+  
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -24,6 +26,7 @@ serve(async (req) => {
     // Get the authorization header
     const authorization = req.headers.get("Authorization");
     if (!authorization) {
+      console.error("No authorization header");
       throw new Error("No authorization header");
     }
 
@@ -33,35 +36,53 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_ANON_KEY") || "",
       { global: { headers: { Authorization: authorization } } }
     );
-
+    
     // Get user from auth
     const {
       data: { user },
       error: userError,
     } = await supabaseClient.auth.getUser();
 
-    if (userError || !user) {
+    if (userError) {
+      console.error("Error getting user:", userError);
       throw new Error("Error getting user");
     }
 
+    if (!user) {
+      console.error("No user found in session");
+      throw new Error("Authentication required");
+    }
+
+    console.log("User authenticated:", user.id);
     const userId = user.id;
-    const { action } = await req.json();
+    
+    // Parse request body
+    const requestData = await req.json();
+    const { action, ...data } = requestData;
+    
+    console.log("Action requested:", action);
 
     // Handle different actions
     if (action === "create-setup-intent") {
       // Check if user already has a Stripe customer
-      const { data: customerData } = await supabaseClient
+      const { data: customerData, error: customerError } = await supabaseClient
         .from("stripe_customers")
         .select("customer_id")
         .eq("id", userId)
         .single();
 
+      if (customerError && customerError.code !== 'PGRST116') {
+        console.error("Error fetching customer:", customerError);
+      }
+
       let customerId;
 
       if (customerData?.customer_id) {
+        console.log("Found existing customer:", customerData.customer_id);
         customerId = customerData.customer_id;
       } else {
         // Create a new Stripe customer
+        console.log("Creating new customer for user:", userId);
         const customer = await stripe.customers.create({
           email: user.email,
           metadata: { userId },
@@ -70,12 +91,17 @@ serve(async (req) => {
         customerId = customer.id;
         
         // Save customer ID in database
-        await supabaseClient
+        const { error: insertError } = await supabaseClient
           .from("stripe_customers")
           .insert({ id: userId, customer_id: customerId });
+          
+        if (insertError) {
+          console.error("Error saving customer:", insertError);
+        }
       }
 
       // Create a SetupIntent
+      console.log("Creating setup intent for customer:", customerId);
       const setupIntent = await stripe.setupIntents.create({
         customer: customerId,
         payment_method_types: ["card"],
@@ -113,7 +139,7 @@ serve(async (req) => {
       );
     }
     else if (action === "save-payment-method") {
-      const { paymentMethodId } = await req.json();
+      const { paymentMethodId } = data;
       
       // Get customer ID
       const { data: customerData } = await supabaseClient
@@ -157,7 +183,7 @@ serve(async (req) => {
       );
     }
     else if (action === "set-default-payment-method") {
-      const { paymentMethodId } = await req.json();
+      const { paymentMethodId } = data;
       
       // Set as default in database
       const { error } = await supabaseClient.rpc("update_default_payment_method", { 
@@ -175,7 +201,7 @@ serve(async (req) => {
       );
     }
     else if (action === "delete-payment-method") {
-      const { paymentMethodId } = await req.json();
+      const { paymentMethodId } = data;
       
       // Remove from database
       await supabaseClient

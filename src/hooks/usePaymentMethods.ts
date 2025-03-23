@@ -39,10 +39,15 @@ export const usePaymentMethods = () => {
   }, [user, fetchPaymentMethods]);
 
   const addPaymentMethod = async (): Promise<string | null> => {
-    if (!user) return null;
+    if (!user) {
+      toast.error('You must be logged in to add a payment method');
+      return null;
+    }
 
     try {
+      console.log('Creating setup intent...');
       const clientSecret = await createSetupIntent();
+      console.log('Setup intent created successfully');
       return clientSecret;
     } catch (err) {
       console.error('Error creating setup intent:', err);
@@ -52,10 +57,14 @@ export const usePaymentMethods = () => {
   };
 
   const confirmPaymentMethod = async (paymentMethodId: string): Promise<boolean> => {
-    if (!user) return false;
+    if (!user) {
+      toast.error('You must be logged in to save a payment method');
+      return false;
+    }
 
     setIsLoading(true);
     try {
+      console.log('Saving payment method:', paymentMethodId);
       const success = await savePaymentMethod(paymentMethodId);
       if (success) {
         toast.success('Payment method added successfully');
@@ -73,7 +82,10 @@ export const usePaymentMethods = () => {
   };
 
   const setDefaultMethod = async (paymentMethodId: string): Promise<boolean> => {
-    if (!user) return false;
+    if (!user) {
+      toast.error('You must be logged in to update payment methods');
+      return false;
+    }
 
     setIsLoading(true);
     try {
@@ -94,7 +106,10 @@ export const usePaymentMethods = () => {
   };
 
   const removePaymentMethod = async (paymentMethodId: string): Promise<boolean> => {
-    if (!user) return false;
+    if (!user) {
+      toast.error('You must be logged in to remove payment methods');
+      return false;
+    }
 
     setIsLoading(true);
     try {
