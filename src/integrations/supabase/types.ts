@@ -17,6 +17,7 @@ export type Database = {
           id: string
           is_default: boolean
           last_four: string
+          stripe_customer_id: string | null
           stripe_payment_method_id: string
           updated_at: string
           user_id: string
@@ -28,6 +29,7 @@ export type Database = {
           id?: string
           is_default?: boolean
           last_four: string
+          stripe_customer_id?: string | null
           stripe_payment_method_id: string
           updated_at?: string
           user_id: string
@@ -39,6 +41,7 @@ export type Database = {
           id?: string
           is_default?: boolean
           last_four?: string
+          stripe_customer_id?: string | null
           stripe_payment_method_id?: string
           updated_at?: string
           user_id?: string
@@ -75,6 +78,24 @@ export type Database = {
           name?: string | null
           phone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      stripe_customers: {
+        Row: {
+          created_at: string
+          customer_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          id: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          id?: string
         }
         Relationships: []
       }

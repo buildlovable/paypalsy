@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { User, CreditCard, Phone, Mail, Key, Edit, Save, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
+import { PaymentMethods } from '@/components/PaymentMethods';
 
 const Profile = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -17,7 +18,6 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Profile data state
   const [userData, setUserData] = useState({
     name: '',
     email: '',
@@ -25,7 +25,6 @@ const Profile = () => {
     avatar: ''
   });
   
-  // Initialize user data from profile
   useEffect(() => {
     if (profile) {
       setUserData({
@@ -37,7 +36,6 @@ const Profile = () => {
     }
   }, [profile]);
   
-  // Redirect if not authenticated
   useEffect(() => {
     if (!isAuthenticated && !isLoading && !profileLoading) {
       navigate('/auth');
@@ -196,27 +194,7 @@ const Profile = () => {
                   </div>
                   
                   <div className="border-t border-gray-200 pt-8">
-                    <h2 className="text-lg font-semibold mb-4">Payment Methods</h2>
-                    
-                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                          <CreditCard className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium">Visa ending in 4242</p>
-                          <p className="text-sm text-gray-500">Expires 04/25</p>
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="sm">
-                        Remove
-                      </Button>
-                    </div>
-                    
-                    <Button variant="outline" className="mt-4">
-                      <CreditCard className="h-4 w-4 mr-2" />
-                      Add Payment Method
-                    </Button>
+                    <PaymentMethods />
                   </div>
                 </div>
               </div>
