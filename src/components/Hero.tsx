@@ -93,7 +93,7 @@ const Hero = () => {
                 <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
                   <DollarSign className="w-4 h-4 text-white" />
                 </div>
-                <span className="font-semibold">PayPal</span>
+                <span className="font-semibold">PayMe</span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 rounded-full bg-gray-300"></div>
