@@ -16,7 +16,7 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
+      {/* Using Sonner for toasts instead of the custom toaster */}
       <Sonner />
       <BrowserRouter>
         <AuthProvider>

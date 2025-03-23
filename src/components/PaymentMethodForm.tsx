@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -89,7 +89,8 @@ export const PaymentMethodForm = ({
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const { addPaymentMethod } = usePaymentMethods();
 
-  useState(() => {
+  // Fixed: Changed useState to useEffect
+  useEffect(() => {
     const getSetupIntent = async () => {
       const secret = await addPaymentMethod();
       if (secret) {
@@ -100,7 +101,7 @@ export const PaymentMethodForm = ({
     };
 
     getSetupIntent();
-  }, []);
+  }, [addPaymentMethod, onCancel]);
 
   if (!clientSecret) {
     return (
