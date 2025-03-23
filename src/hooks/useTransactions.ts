@@ -32,7 +32,9 @@ export const useTransactions = () => {
   };
 
   useEffect(() => {
-    fetchTransactions();
+    if (user) {
+      fetchTransactions();
+    }
   }, [user]);
 
   const sendMoney = async (recipientId: string, amount: number, note?: string) => {

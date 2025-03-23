@@ -1,6 +1,8 @@
+
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
-import { Transaction, User } from '@/lib/types';
+import { Transaction } from '@/lib/types';
 import TransactionCard from '@/components/TransactionCard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SendMoneyForm from '@/components/SendMoneyForm';
@@ -8,108 +10,13 @@ import RequestMoneyForm from '@/components/RequestMoneyForm';
 import UserAvatar from '@/components/UserAvatar';
 import { ArrowUpRight, ArrowDownLeft, Wallet, CreditCard, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTransactions } from '@/hooks/useTransactions';
 
 const Dashboard = () => {
-  // Mock current user
-  const [currentUser, setCurrentUser] = useState<User>({
-    id: '1',
-    name: 'Alex Johnson',
-    email: 'alex@example.com',
-    avatar: '',
-    balance: 1248.56
-  });
-  
-  // Mock transactions
-  const [transactions, setTransactions] = useState<Transaction[]>([
-    {
-      id: '1',
-      amount: 24.99,
-      type: 'payment',
-      status: 'completed',
-      date: '2023-08-01T14:30:00Z',
-      note: 'Dinner',
-      sender: {
-        id: '1',
-        name: 'Alex Johnson',
-        avatar: ''
-      },
-      recipient: {
-        id: '2',
-        name: 'Sarah Smith',
-        avatar: ''
-      }
-    },
-    {
-      id: '2',
-      amount: 45.00,
-      type: 'payment',
-      status: 'completed',
-      date: '2023-07-28T09:15:00Z',
-      note: 'Movie tickets',
-      sender: {
-        id: '3',
-        name: 'John Doe',
-        avatar: ''
-      },
-      recipient: {
-        id: '1',
-        name: 'Alex Johnson',
-        avatar: ''
-      }
-    },
-    {
-      id: '3',
-      amount: 15.75,
-      type: 'request',
-      status: 'pending',
-      date: '2023-07-27T16:45:00Z',
-      sender: {
-        id: '1',
-        name: 'Alex Johnson',
-        avatar: ''
-      },
-      recipient: {
-        id: '4',
-        name: 'Michael Brown',
-        avatar: ''
-      }
-    },
-    {
-      id: '4',
-      amount: 32.50,
-      type: 'payment',
-      status: 'completed',
-      date: '2023-07-25T11:20:00Z',
-      note: 'Lunch',
-      sender: {
-        id: '1',
-        name: 'Alex Johnson',
-        avatar: ''
-      },
-      recipient: {
-        id: '5',
-        name: 'Emily Wilson',
-        avatar: ''
-      }
-    },
-    {
-      id: '5',
-      amount: 120.00,
-      type: 'payment',
-      status: 'completed',
-      date: '2023-07-20T13:10:00Z',
-      sender: {
-        id: '6',
-        name: 'David Lee',
-        avatar: ''
-      },
-      recipient: {
-        id: '1',
-        name: 'Alex Johnson',
-        avatar: ''
-      }
-    }
-  ]);
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { transactions, isLoading: transactionsLoading } = useTransactions();
+  const navigate = useNavigate();
   
   const [activeTab, setActiveTab] = useState('transactions');
   const [currentPage, setCurrentPage] = useState(1);
@@ -133,10 +40,62 @@ const Dashboard = () => {
     }
   };
   
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated && !authLoading) {
+      navigate('/auth');
+    }
+  }, [isAuthenticated, navigate, authLoading]);
+  
   useEffect(() => {
     // Scroll to top when component mounts
     window.scrollTo(0, 0);
   }, []);
+
+  // Calculate monthly totals for sent and received
+  const calculateMonthlySent = () => {
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    
+    return transactions
+      .filter(t => {
+        const transDate = new Date(t.date);
+        return t.type === 'payment' && 
+               t.sender.id === user?.id && 
+               transDate.getMonth() === currentMonth &&
+               transDate.getFullYear() === currentYear;
+      })
+      .reduce((sum, t) => sum + t.amount, 0);
+  };
+  
+  const calculateMonthlyReceived = () => {
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    
+    return transactions
+      .filter(t => {
+        const transDate = new Date(t.date);
+        return t.type === 'payment' && 
+               t.recipient.id === user?.id && 
+               transDate.getMonth() === currentMonth &&
+               transDate.getFullYear() === currentYear;
+      })
+      .reduce((sum, t) => sum + t.amount, 0);
+  };
+
+  if (authLoading || transactionsLoading || !user) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <Navbar />
+        <div className="pt-20 pb-10 flex-1 flex items-center justify-center">
+          <div className="animate-pulse text-center">
+            <p className="text-gray-500 mb-2">Loading your dashboard...</p>
+            <div className="w-12 h-12 border-4 border-t-primary border-gray-200 rounded-full animate-spin mx-auto"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -150,10 +109,10 @@ const Dashboard = () => {
               <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center space-x-3">
-                    <UserAvatar user={currentUser} size="lg" />
+                    <UserAvatar user={user} size="lg" />
                     <div>
-                      <h2 className="font-bold text-xl">{currentUser.name}</h2>
-                      <p className="text-gray-500 text-sm">{currentUser.email}</p>
+                      <h2 className="font-bold text-xl">{user.name}</h2>
+                      <p className="text-gray-500 text-sm">{user.email}</p>
                     </div>
                   </div>
                 </div>
@@ -161,7 +120,7 @@ const Dashboard = () => {
                 <div className="mt-4">
                   <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
                     <p className="text-sm text-gray-500 mb-1">Current Balance</p>
-                    <h3 className="text-2xl font-bold">${currentUser.balance.toFixed(2)}</h3>
+                    <h3 className="text-2xl font-bold">${user.balance.toFixed(2)}</h3>
                   </div>
                 </div>
                 
@@ -229,13 +188,13 @@ const Dashboard = () => {
                         <ArrowLeft className="h-4 w-4" />
                       </Button>
                       <span className="text-sm text-gray-500">
-                        {currentPage} / {totalPages}
+                        {currentPage} / {Math.max(totalPages, 1)}
                       </span>
                       <Button
                         variant="outline"
                         size="icon"
                         onClick={nextPage}
-                        disabled={currentPage === totalPages}
+                        disabled={currentPage === totalPages || totalPages === 0}
                         className="h-8 w-8"
                       >
                         <ArrowRight className="h-4 w-4" />
@@ -249,7 +208,7 @@ const Dashboard = () => {
                         <TransactionCard
                           key={transaction.id}
                           transaction={transaction}
-                          currentUserId={currentUser.id}
+                          currentUserId={user.id}
                         />
                       ))
                     ) : (
@@ -279,7 +238,7 @@ const Dashboard = () => {
                 
                 <TabsContent value="send" className="p-6">
                   <h2 className="text-xl font-bold mb-6">Send Money</h2>
-                  <SendMoneyForm balance={currentUser.balance} />
+                  <SendMoneyForm balance={user.balance} />
                 </TabsContent>
                 
                 <TabsContent value="request" className="p-6">
@@ -299,7 +258,7 @@ const Dashboard = () => {
                       <p className="text-gray-500 text-sm">This month</p>
                     </div>
                   </div>
-                  <p className="text-2xl font-bold">$57.49</p>
+                  <p className="text-2xl font-bold">${calculateMonthlySent().toFixed(2)}</p>
                 </div>
                 
                 <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
@@ -312,7 +271,7 @@ const Dashboard = () => {
                       <p className="text-gray-500 text-sm">This month</p>
                     </div>
                   </div>
-                  <p className="text-2xl font-bold">$165.00</p>
+                  <p className="text-2xl font-bold">${calculateMonthlyReceived().toFixed(2)}</p>
                 </div>
               </div>
             </div>

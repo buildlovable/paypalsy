@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User as SupabaseUser, Session, AuthError } from '@supabase/supabase-js';
 import { AuthFormData, User as AppUser, mapSupabaseUser } from '@/lib/types';
@@ -70,6 +71,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           return;
         }
         
+        // Use setTimeout to defer the async operation as recommended in Supabase docs
         setTimeout(async () => {
           try {
             if (isMounted) {

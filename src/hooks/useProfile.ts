@@ -32,7 +32,9 @@ export const useProfile = () => {
       }
     };
 
-    loadProfile();
+    if (user) {
+      loadProfile();
+    }
   }, [user]);
 
   const updateProfile = async (updates: Partial<Profile>) => {
