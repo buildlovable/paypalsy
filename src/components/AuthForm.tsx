@@ -79,7 +79,11 @@ const AuthForm = () => {
     
     setIsSubmitting(true);
     try {
+      console.log("Requesting password reset for:", forgotEmail);
       await forgotPassword(forgotEmail);
+      toast.success(`Password reset instructions sent to ${forgotEmail}. Please check your inbox and spam folder.`);
+    } catch (error) {
+      console.error("Error requesting password reset:", error);
     } finally {
       setIsSubmitting(false);
     }

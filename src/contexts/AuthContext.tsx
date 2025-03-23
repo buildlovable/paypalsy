@@ -26,7 +26,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Update user profile data when session changes
   const updateUserData = async (supabaseUser: SupabaseUser | null) => {
     if (!supabaseUser) {
       setUser(null);
@@ -39,7 +38,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (profileData) {
         setUser(profileData);
       } else {
-        // Fallback if profile not found
         setUser({
           id: supabaseUser.id,
           email: supabaseUser.email || '',
@@ -51,33 +49,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error('Error fetching user profile:', error);
     } finally {
-      // Always set loading to false when done, regardless of outcome
       setIsLoading(false);
     }
   };
 
-  // Set up auth state listener and check for existing session
   useEffect(() => {
     let isMounted = true;
     console.log('Setting up auth state listener');
     
-    // First set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
         if (!isMounted) return;
         console.log('Auth state changed:', event, !!currentSession);
         
-        // Set session synchronously
         setSession(currentSession);
         
-        // If no session, we can immediately set user to null and isLoading to false
         if (!currentSession) {
           setUser(null);
           setIsLoading(false);
           return;
         }
         
-        // Use setTimeout to defer the async operation to avoid blocking during auth state change
         setTimeout(async () => {
           try {
             if (isMounted) {
@@ -93,7 +85,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    // Then check for existing session
     const initializeAuth = async () => {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -103,7 +94,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         setSession(currentSession);
         
-        // Don't wait for profile data to finish loading if there's no session
         if (!currentSession) {
           setIsLoading(false);
           return;
@@ -144,7 +134,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const authError = error as AuthError;
       console.error('Login failed:', authError);
       toast.error(authError.message || 'Login failed. Please check your credentials.');
-      throw error; // Rethrow to handle in form component
+      throw error;
     }
   };
 
@@ -170,7 +160,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const authError = error as AuthError;
       console.error('Signup failed:', authError);
       toast.error(authError.message || 'Failed to create account. Please try again.');
-      throw error; // Rethrow to handle in form component
+      throw error;
     }
   };
 
@@ -185,11 +175,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // New forgot password function
   const forgotPassword = async (email: string) => {
     try {
+      const origin = window.location.origin;
+      const redirectTo = `${origin}/auth?reset=true`;
+      
+      console.log(`Sending password reset to ${email} with redirect to ${redirectTo}`);
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth?reset=true`,
+        redirectTo: redirectTo,
       });
 
       if (error) {
@@ -205,7 +199,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // New reset password function
   const resetPassword = async (newPassword: string) => {
     try {
       const { error } = await supabase.auth.updateUser({
