@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User as SupabaseUser, Session, AuthError } from '@supabase/supabase-js';
 import { AuthFormData, User as AppUser, mapSupabaseUser } from '@/lib/types';
@@ -15,6 +14,8 @@ interface AuthContextType {
   login: (data: AuthFormData) => Promise<void>;
   signup: (data: AuthFormData) => Promise<void>;
   logout: () => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -184,6 +185,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // New forgot password function
+  const forgotPassword = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth?reset=true`,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success('Password reset link sent to your email');
+    } catch (error) {
+      const authError = error as AuthError;
+      console.error('Password reset failed:', authError);
+      toast.error(authError.message || 'Failed to send password reset email. Please try again.');
+      throw error;
+    }
+  };
+
+  // New reset password function
+  const resetPassword = async (newPassword: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success('Password updated successfully');
+      navigate('/dashboard');
+    } catch (error) {
+      const authError = error as AuthError;
+      console.error('Password update failed:', authError);
+      toast.error(authError.message || 'Failed to update password. Please try again.');
+      throw error;
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -194,6 +236,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         login,
         signup,
         logout,
+        forgotPassword,
+        resetPassword,
       }}
     >
       {children}

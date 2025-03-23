@@ -4,27 +4,35 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Eye, EyeOff, Mail, Key, User } from 'lucide-react';
+import { Eye, EyeOff, Mail, Key, User, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useLocation } from 'react-router-dom';
 
 const AuthForm = () => {
-  const { login, signup, isLoading } = useAuth();
+  const location = useLocation();
+  const { login, signup, forgotPassword, resetPassword, isLoading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Login form state
+  const isResetMode = location.search.includes('reset=true');
+  
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   
-  // Signup form state
   const [signupName, setSignupName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [showForgotForm, setShowForgotForm] = useState(false);
+  
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Basic validation
     if (!loginEmail || !loginPassword) {
       toast.error('Please fill in all fields');
       return;
@@ -44,7 +52,6 @@ const AuthForm = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Basic validation
     if (!signupName || !signupEmail || !signupPassword) {
       toast.error('Please fill in all fields');
       return;
@@ -61,9 +68,179 @@ const AuthForm = () => {
       setIsSubmitting(false);
     }
   };
+  
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!forgotEmail) {
+      toast.error('Please enter your email address');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      await forgotPassword(forgotEmail);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newPassword || !confirmPassword) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    
+    if (newPassword.length < 8) {
+      toast.error('Password must be at least 8 characters long');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      await resetPassword(newPassword);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-  // Determine if loading should be shown (either from auth context or local submission state)
   const showLoading = isSubmitting || isLoading;
+
+  if (isResetMode) {
+    return (
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold mb-2">Reset Your Password</h1>
+          <p className="text-gray-600">Enter a new password for your account</p>
+        </div>
+        
+        <form onSubmit={handleResetPassword} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="new-password">New Password</Label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <Key className="h-4 w-4 text-gray-500" />
+              </div>
+              <Input
+                id="new-password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="••••••••"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                disabled={showLoading}
+                className="pl-10"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute inset-y-0 right-0 flex items-center px-3"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4 text-gray-500" />
+                ) : (
+                  <Eye className="h-4 w-4 text-gray-500" />
+                )}
+              </Button>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="confirm-password">Confirm Password</Label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <Key className="h-4 w-4 text-gray-500" />
+              </div>
+              <Input
+                id="confirm-password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={showLoading}
+                className="pl-10"
+              />
+            </div>
+          </div>
+          
+          <Button 
+            type="submit" 
+            className="w-full py-6 mt-6"
+            disabled={showLoading}
+          >
+            {showLoading ? (
+              <div className="flex items-center">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                Updating Password...
+              </div>
+            ) : 'Reset Password'}
+          </Button>
+        </form>
+      </div>
+    );
+  }
+
+  if (showForgotForm) {
+    return (
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold mb-2">Forgot Password</h1>
+          <p className="text-gray-600">Enter your email to receive a password reset link</p>
+        </div>
+        
+        <form onSubmit={handleForgotPassword} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="forgot-email">Email</Label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <Mail className="h-4 w-4 text-gray-500" />
+              </div>
+              <Input
+                id="forgot-email"
+                type="email"
+                placeholder="you@example.com"
+                value={forgotEmail}
+                onChange={(e) => setForgotEmail(e.target.value)}
+                disabled={showLoading}
+                className="pl-10"
+              />
+            </div>
+          </div>
+          
+          <Button 
+            type="submit" 
+            className="w-full py-6 mt-6"
+            disabled={showLoading}
+          >
+            {showLoading ? (
+              <div className="flex items-center">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                Sending Reset Link...
+              </div>
+            ) : 'Send Reset Link'}
+          </Button>
+          
+          <Button 
+            type="button" 
+            variant="outline" 
+            className="w-full py-6 mt-2 flex items-center justify-center"
+            onClick={() => setShowForgotForm(false)}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Login
+          </Button>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-md">
@@ -96,9 +273,13 @@ const AuthForm = () => {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <a href="#" className="text-xs text-primary hover:underline">
+                <button 
+                  type="button"
+                  onClick={() => setShowForgotForm(true)}
+                  className="text-xs text-primary hover:underline"
+                >
                   Forgot password?
-                </a>
+                </button>
               </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">

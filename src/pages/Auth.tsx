@@ -2,21 +2,25 @@
 import Navbar from '@/components/Navbar';
 import AuthForm from '@/components/AuthForm';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Progress } from "@/components/ui/progress";
 
 const Auth = () => {
   const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showLoadingState, setShowLoadingState] = useState(true);
+  
+  // Check if we're in password reset mode
+  const isResetMode = location.search.includes('reset=true');
 
   useEffect(() => {
     // Scroll to top when component mounts
     window.scrollTo(0, 0);
     
-    // If already authenticated, redirect immediately
-    if (isAuthenticated) {
+    // If already authenticated and not in reset mode, redirect immediately
+    if (isAuthenticated && !isResetMode) {
       navigate('/dashboard');
       return;
     }
@@ -27,7 +31,7 @@ const Auth = () => {
     }, 300);
     
     return () => clearTimeout(timer);
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, isResetMode]);
 
   // Only show loading state if explicitly loading AND we haven't timed out
   const shouldShowLoading = isLoading && showLoadingState && !isAuthenticated;
@@ -49,10 +53,12 @@ const Auth = () => {
           </div>
         ) : (
           <div className="max-w-md w-full">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
-              <p className="text-gray-600">Enter your credentials to access your account</p>
-            </div>
+            {!isResetMode && (
+              <div className="text-center mb-8">
+                <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
+                <p className="text-gray-600">Enter your credentials to access your account</p>
+              </div>
+            )}
             <AuthForm />
           </div>
         )}
